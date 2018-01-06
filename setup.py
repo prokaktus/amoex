@@ -13,12 +13,6 @@ Asyncio MOEX Python API
 """
 
 
-# get requirements list
-current = os.path.abspath(os.path.dirname(__file__))
-with open(os.path.join(current, 'requirements.txt')) as fp:
-    requirements = fp.read().splitlines()
-
-
 setup(
     name="amoex",
     url="https://github.com/prokaktus/amoex",
@@ -29,7 +23,7 @@ setup(
     packages=[
         'amoex'
     ],
-    install_requires=requirements,
+    install_requires=['aiohttp', 'toolz'],
     classifiers=[
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
