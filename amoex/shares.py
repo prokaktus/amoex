@@ -6,10 +6,8 @@ from toolz import merge
 
 from .base import BASE_URL
 
-
 URL = 'iss/history/engines/stock/markets/shares/boards/'
 PAGE_SIZE = 100
-
 
 _columns = ["BOARDID", "TRADEDATE", "SHORTNAME", "SECID",
             "NUMTRADES", "VALUE", "OPEN", "LOW", "HIGH",
@@ -22,10 +20,10 @@ _columns_len = len(_columns)
 
 class HistoryShares:
     DATE_FORMAT = '%Y-%m-%d'
-    
+
     def __init__(self, board='tqbr', loop=None):
-        self.url = '{}{}{}/securities'.format(BASE_URL, 
-            URL, board)
+        self.url = '{}{}{}/securities'.format(BASE_URL,
+                                              URL, board)
         self.loop = loop or asyncio.get_event_loop()
 
     def _sync_wrapper(self, func, *args, **kwargs):
@@ -36,7 +34,7 @@ class HistoryShares:
         """
         Convert date to string representation (if required)
         """
-        if isinstance(date, (datetime, date_type, )):
+        if isinstance(date, (datetime, date_type,)):
             return date.strftime(cls.DATE_FORMAT)
         return date
 
@@ -70,26 +68,26 @@ class HistoryShares:
 
         url = '{}/{}'.format(self.url, ticker)
         data = {}
-        start_date = self._serialize_date(start_date)
-        end_date = self._serialize_date(end_date)
+        start_date_str = self._serialize_date(start_date)
+        end_date_str = self._serialize_date(end_date)
 
         while True:
-            page_data = await self.call(ticker, url, start=start)
+            page_data = await self.call(ticker, url, start=start_date_str)
             if not page_data:
                 break
             last_entry = page_data[-1]
-            if start_date and start_date > last_entry['TRADEDATE']:
+            if start_date and start_date > self._parse_date(last_entry['TRADEDATE']):
                 start += PAGE_SIZE
                 continue
             first_entry = page_data[0]
-            if end_date and end_date < first_entry['TRADEDATE']:
+            if end_date and end_date < self._parse_date(first_entry['TRADEDATE']):
                 break
 
             for d in page_data:
-                trade_date = d['TRADEDATE']
+                trade_date = self._parse_date(d['TRADEDATE'])
                 if (not start_date or start_date < trade_date) and \
-                   (not end_date or trade_date < end_date):
-                    data[self._parse_date(trade_date)] = d
+                        (not end_date or trade_date < end_date):
+                    data[trade_date] = d
 
             start += PAGE_SIZE
 
@@ -111,8 +109,7 @@ class HistoryShares:
         # TODO: add error-checking and retry
         pass
 
-
-    async def call(self, ticker=None, url=None, date=None, start=None):
+    async def call(self, ticker=None, url=None, date=None, start=None, extra_params=None):
         """
         Perform call to the API
         """
@@ -121,7 +118,8 @@ class HistoryShares:
 
         params = merge(
             {'date': date} if date else {},
-            {'start': start} if start else {}
+            {'start': start} if start else {},
+            extra_params if extra_params else {},
         )
 
         async with aiohttp.ClientSession(raise_for_status=True) as session:
